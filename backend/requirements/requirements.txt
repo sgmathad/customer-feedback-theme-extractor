@@ -11,3 +11,6 @@ pdfplumber
 anthropic
 transformers
 torch
+reportlab
+python-dotenv
+openpyxl
