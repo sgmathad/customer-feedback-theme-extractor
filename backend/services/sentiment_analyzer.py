@@ -1,5 +1,7 @@
-from transformers import pipeline
-from typing import List, Dict, Any
+from openai import OpenAI
+import os
+from typing import Dict, Any, List
+import json
 import logging
 
 logger = logging.getLogger(__name__)
@@ -7,58 +9,64 @@ logger = logging.getLogger(__name__)
 
 class SentimentAnalyzer:
     """
-    Analyze sentiment of feedback entries using a pre-trained model
+    Analyze sentiment using an LLM API.
     """
 
     def __init__(self):
-        logger.info("Loading sentiment analysis model...")
-        self.classifier = pipeline(
-            task="sentiment-analysis",
-            model="distilbert-base-uncased-finetuned-sst-2-english",
-            truncation=True,
-            max_length=512,
-        )
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
     def analyze(self, text: str) -> Dict[str, Any]:
-        """
-        Analyze sentiment of a single text.
-        Returns dict with 'label' (POSITIVE/NEGATIVE) and 'score'.
-        Maps to: positive, neutral, negative
-        """
         try:
-            result = self.classifier(text[:512])[0]
-            label = result["label"].lower()
-            score = result["score"]
+            response = self.client.responses.create(
+                model="gpt-5-mini",
+                input=f"""
+Classify the sentiment of this customer feedback.
 
-            # Map to three-way sentiment using confidence threshold
-            if label == "positive":
-                sentiment = "positive" if score > 0.75 else "neutral"
-            else:
-                sentiment = "negative" if score > 0.75 else "neutral"
+Return ONLY valid JSON:
 
-            return {"sentiment": sentiment, "score": float(score), "raw_label": label}
+{{
+    "sentiment": "positive|neutral|negative",
+    "score": 0.0-1.0
+}}
+
+Feedback:
+{text}
+""",
+            )
+
+            result = json.loads(response.output_text)
+
+            return {
+                "sentiment": result["sentiment"],
+                "score": float(result["score"]),
+            }
+
         except Exception as e:
             logger.error(f"Sentiment analysis error: {e}")
-            return {"sentiment": "neutral", "score": 0.5, "raw_label": "unknown"}
+            return {
+                "sentiment": "neutral",
+                "score": 0.5,
+            }
 
     def analyze_batch(
-        self, feedback_list: List[Dict[str, Any]]
+        self,
+        feedback_list: List[Dict[str, Any]],
     ) -> List[Dict[str, Any]]:
-        """
-        Add sentiment to each feedback entry.
-        """
+
         logger.info(f"Analyzing sentiment for {len(feedback_list)} entries...")
+
         for entry in feedback_list:
             result = self.analyze(entry.get("raw_text", ""))
+
             entry["sentiment"] = result["sentiment"]
             entry["sentiment_score"] = result["score"]
-        logger.info("Sentiment analysis complete.")
+
         return feedback_list
 
 
 def aggregate_sentiment_by_theme(
     feedback_list: List[Dict[str, Any]], themes: List[Dict[str, Any]]
-) -> List[Dict[str, Any]]:
+) -> Any:
     """
     Aggregate sentiment counts per theme and attach to theme metadata.
     """

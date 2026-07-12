@@ -55,6 +55,7 @@ app.add_middleware(
 # Health / root
 # ─────────────────────────────────────────────
 
+
 @app.get("/")
 async def root():
     return {
@@ -67,6 +68,7 @@ async def root():
 # ─────────────────────────────────────────────
 # Upload
 # ─────────────────────────────────────────────
+
 
 @app.post("/upload")
 async def upload_files(files: List[UploadFile] = File(...)):
@@ -93,6 +95,7 @@ async def upload_files(files: List[UploadFile] = File(...)):
 # Demo dataset
 # ─────────────────────────────────────────────
 
+
 @app.post("/demo")
 async def load_demo_dataset():
     """Load the synthetic demo dataset into the uploads directory."""
@@ -112,12 +115,14 @@ async def load_demo_dataset():
 # Analyze
 # ─────────────────────────────────────────────
 
+
 @app.post("/analyze")
 async def analyze_feedback():
     """Full analysis pipeline: parse → clean → embed → cluster → themes → sentiment → quotes → recommendations."""
     try:
         valid_files = [
-            f for f in UPLOAD_DIR.glob("*")
+            f
+            for f in UPLOAD_DIR.glob("*")
             if f.is_file() and f.suffix.lower() in ALLOWED_EXTENSIONS
         ]
         if not valid_files:
@@ -131,7 +136,9 @@ async def analyze_feedback():
         # 1. Parse
         feedback_list = parse_all_files(UPLOAD_DIR)
         if not feedback_list:
-            raise HTTPException(status_code=400, detail="No valid feedback found in uploaded files.")
+            raise HTTPException(
+                status_code=400, detail="No valid feedback found in uploaded files."
+            )
 
         # 2. Clean
         clean_feedback = clean_and_prepare_feedback(
@@ -141,7 +148,10 @@ async def analyze_feedback():
             similarity_threshold=0.95,
         )
         if not clean_feedback:
-            raise HTTPException(status_code=400, detail="All feedback was too short or invalid after cleaning.")
+            raise HTTPException(
+                status_code=400,
+                detail="All feedback was too short or invalid after cleaning.",
+            )
 
         logger.info(f"Clean feedback: {len(clean_feedback)} entries")
 
@@ -153,7 +163,9 @@ async def analyze_feedback():
         logger.info(f"Clusters: {num_clusters}")
 
         # 4. Theme names
-        themes = generate_themes(clustered_feedback, api_key=os.getenv("ANTHROPIC_API_KEY"))
+        themes = generate_themes(
+            clustered_feedback, api_key=os.getenv("ANTHROPIC_API_KEY")
+        )
         logger.info(f"Themes generated: {len(themes)}")
 
         # 5. Sentiment analysis
@@ -186,6 +198,14 @@ async def analyze_feedback():
             "overall_sentiment": overall_sentiment,
             "recommendations": recommendations,
         }
+        # Cleanup uploaded files after successful analysis
+        deleted_files = 0
+        for f in UPLOAD_DIR.iterdir():
+            if f.is_file():
+                f.unlink()
+                deleted_files += 1
+
+        logger.info(f"Deleted {deleted_files} uploaded files after analysis")
 
         return {
             "success": True,
@@ -211,10 +231,12 @@ async def analyze_feedback():
 # Status
 # ─────────────────────────────────────────────
 
+
 @app.get("/status")
 async def get_status():
     valid_files = [
-        f.name for f in UPLOAD_DIR.glob("*")
+        f.name
+        for f in UPLOAD_DIR.glob("*")
         if f.is_file() and f.suffix.lower() in ALLOWED_EXTENSIONS
     ]
     return {
@@ -229,10 +251,13 @@ async def get_status():
 # Results
 # ─────────────────────────────────────────────
 
+
 @app.get("/results/{analysis_id}")
 async def get_analysis_results(analysis_id: str):
     if analysis_id not in analysis_results:
-        raise HTTPException(status_code=404, detail=f"Analysis '{analysis_id}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Analysis '{analysis_id}' not found."
+        )
     return analysis_results[analysis_id]
 
 
@@ -256,11 +281,14 @@ async def list_analyses():
 # PDF Export
 # ─────────────────────────────────────────────
 
+
 @app.get("/results/{analysis_id}/pdf")
 async def download_pdf_report(analysis_id: str):
     """Generate and stream a PDF report for a completed analysis."""
     if analysis_id not in analysis_results:
-        raise HTTPException(status_code=404, detail=f"Analysis '{analysis_id}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Analysis '{analysis_id}' not found."
+        )
 
     data = analysis_results[analysis_id]
     try:
@@ -286,6 +314,7 @@ async def download_pdf_report(analysis_id: str):
 # Clear / Delete
 # ─────────────────────────────────────────────
 
+
 @app.delete("/clear")
 async def clear_uploads():
     deleted_count = 0
@@ -294,13 +323,19 @@ async def clear_uploads():
             f.unlink()
             deleted_count += 1
     logger.info(f"Cleared {deleted_count} uploaded files")
-    return {"success": True, "message": f"Cleared {deleted_count} files", "files_deleted": deleted_count}
+    return {
+        "success": True,
+        "message": f"Cleared {deleted_count} files",
+        "files_deleted": deleted_count,
+    }
 
 
 @app.delete("/results/{analysis_id}")
 async def delete_analysis(analysis_id: str):
     if analysis_id not in analysis_results:
-        raise HTTPException(status_code=404, detail=f"Analysis '{analysis_id}' not found.")
+        raise HTTPException(
+            status_code=404, detail=f"Analysis '{analysis_id}' not found."
+        )
     del analysis_results[analysis_id]
     return {"success": True, "message": f"Analysis '{analysis_id}' deleted."}
 
@@ -314,4 +349,5 @@ async def clear_all_results():
 
 if __name__ == "__main__":
     import uvicorn
+
     uvicorn.run(app, host="0.0.0.0", port=8000)

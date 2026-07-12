@@ -1,4 +1,6 @@
-from sentence_transformers import SentenceTransformer
+# from sentence_transformers import SentenceTransformer
+import os
+from openai import OpenAI
 from sklearn.cluster import KMeans
 from sklearn.metrics import silhouette_score
 import numpy as np
@@ -9,33 +11,17 @@ logger = logging.getLogger(__name__)
 
 
 class FeedbackEmbedder:
-    """
-    Generate embeddings for feedback using sentence transformers
-    """
 
-    def __init__(self, model_name: str = "all-MiniLM-L6-v2"):
-        """
-        Initialize with a sentence transformer model
+    def __init__(self):
+        self.client = OpenAI(api_key=os.getenv("OPENAI_API_KEY"))
 
-        Args:
-            model_name: Name of the sentence-transformers model
-        """
-        logger.info(f"Loading embedding model: {model_name}")
-        self.model = SentenceTransformer(model_name)
+    def generate_embeddings(self, texts):
+        response = self.client.embeddings.create(
+            model="text-embedding-3-small", input=texts
+        )
 
-    def generate_embeddings(self, texts: List[str]) -> np.ndarray:
-        """
-        Generate embeddings for a list of texts
+        embeddings = np.array([item.embedding for item in response.data])
 
-        Args:
-            texts: List of feedback text strings
-
-        Returns:
-            numpy array of embeddings (n_samples, embedding_dim)
-        """
-        logger.info(f"Generating embeddings for {len(texts)} texts")
-        embeddings = self.model.encode(texts, show_progress_bar=True)
-        logger.info(f"Embeddings shape: {embeddings.shape}")
         return embeddings
 
 
@@ -144,7 +130,7 @@ def generate_embeddings_and_cluster(
     texts = [entry["raw_text"] for entry in feedback_list]
 
     # Generate embeddings
-    embedder = FeedbackEmbedder(model_name=model_name)
+    embedder = FeedbackEmbedder()
     embeddings = embedder.generate_embeddings(texts)
 
     # Cluster

@@ -8,7 +8,6 @@ scikit-learn
 python-docx
 python-multipart
 pdfplumber
-anthropic
 transformers
 torch
 reportlab
@@ -17,3 +16,4 @@ openpyxl
 pytest
 pytest-asyncio
 httpx
+openai
