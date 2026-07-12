@@ -33,7 +33,7 @@ export const FeedBackUpload: React.FC = () => {
             const formData = new FormData();
             formData.append("files", file.file);
             try {
-                await axios.post("http://127.0.0.1:8000/upload", formData, {
+                await axios.post("https://feedback-extractor-api.onrender.com/upload", formData, {
                     onUploadProgress: (progressEvent) => {
                         const progress = Math.round(
                             (progressEvent.loaded * 100) / (progressEvent.total || 1)
@@ -55,7 +55,7 @@ export const FeedBackUpload: React.FC = () => {
         setStep("analyzing");
         setErrorMsg("");
         try {
-            const { data } = await axios.post<AnalysisResult>("http://127.0.0.1:8000/analyze");
+            const { data } = await axios.post<AnalysisResult>("https://feedback-extractor-api.onrender.com/analyze");
             setResult(data);
             setStep("done");
         } catch (e: unknown) {
@@ -71,7 +71,7 @@ export const FeedBackUpload: React.FC = () => {
 
     const clearFiles = async () => {
         try {
-            await axios.delete("http://127.0.0.1:8000/clear");
+            await axios.delete("https://feedback-extractor-api.onrender.com/clear");
         } catch (e) {
             console.error(e);
         }
@@ -85,7 +85,7 @@ export const FeedBackUpload: React.FC = () => {
         setDemoLoading(true);
         setErrorMsg("");
         try {
-            await axios.post("http://127.0.0.1:8000/demo");
+            await axios.post("https://feedback-extractor-api.onrender.com/demo");
             setFiles([{ id: "demo", progress: 100, file: new File([], "demo_dataset") }]);
             setStep("uploaded");
         } catch (e) {

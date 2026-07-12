@@ -20,7 +20,7 @@ export const Dashboard: React.FC<DashboardProps> = ({ result }) => {
         setDownloading(true);
         try {
             const response = await axios.get(
-                `http://127.0.0.1:8000/results/${result.analysis_id}/pdf`,
+                `https://feedback-extractor-api.onrender.com/results/${result.analysis_id}/pdf`,
                 { responseType: "blob" }
             );
             const url = window.URL.createObjectURL(new Blob([response.data], { type: "application/pdf" }));
